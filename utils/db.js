@@ -17,12 +17,12 @@ class DBClient {
   }
 
   isAlive() {
-    return this.client.isConnected();
+    return this.client.topology && this.client.topology.isConnected();
   }
 
   async nbUsers() {
     try {
-      return this.client.db().collection('users').countDocuments();
+      return await this.client.db().collection('users').countDocuments();
     } catch (e) {
       throw new Error('Unable to fetch the users count');
     }
@@ -84,26 +84,10 @@ class DBClient {
 
   async nbFiles() {
     try {
-      return this.client.db().collection('files').countDocuments();
+      return await this.client.db().collection('files').countDocuments();
     } catch (e) {
       throw new Error('Unable to fetch the files count');
     }
-  }
-
-  /**
-   * Retrieves a reference to the `users` collection.
-   * @returns {Promise<Collection>}
-   */
-  async usersCollection() {
-    return this.client.db().collection('users');
-  }
-
-  /**
-   * Retrieves a reference to the `files` collection.
-   * @returns {Promise<Collection>}
-   */
-  async filesCollection() {
-    return this.client.db().collection('files');
   }
 }
 
