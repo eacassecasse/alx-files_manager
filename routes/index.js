@@ -4,13 +4,9 @@ import UsersController from '../controllers/UsersController';
 import redisClient from '../utils/redis';
 import AuthController from '../controllers/AuthController';
 import FilesController from '../controllers/FilesController';
+import BusinessError, { AuthError } from '../models/errors';
 
 const router = express.Router();
-
-// Helper function to send error responses and stop further processing
-const sendErrorResponse = (res, status, message) => {
-  res.status(status).json({ error: message });
-};
 
 // Status route
 router.get('/status', (req, res) => {
@@ -18,37 +14,37 @@ router.get('/status', (req, res) => {
 });
 
 // Stats route
-router.get('/stats', async (req, res) => {
+router.get('/stats', async (req, res, next) => {
   try {
     const stats = await AppController.getStats();
     res.status(200).json(stats);
   } catch (err) {
-    sendErrorResponse(res, 500, err.message);
+    next(err);
   }
 });
 
 // Create a new user
-router.post('/users', async (req, res) => {
+router.post('/users', async (req, res, next) => {
   const { email, password } = req.body;
 
-  if (!email) return sendErrorResponse(res, 400, 'Missing email');
-  if (!password) return sendErrorResponse(res, 400, 'Missing password');
+  if (!email) throw new BusinessError('Missing email');
+  if (!password) throw new BusinessError('Missing password');
 
   try {
-    const result = await UsersController.postNew({ email, password });
+    const result = await UsersController.postNew(email, password);
     const user = result.ops[0];
     res.status(201).json({ id: user._id, email: user.email });
   } catch (err) {
-    sendErrorResponse(res, 400, err.message);
+    next(err);
   }
 });
 
 // Connect route
-router.get('/connect', async (req, res) => {
+router.get('/connect', async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Basic ')) {
-    return sendErrorResponse(res, 401, 'Unauthorized');
+    throw new AuthError('Unauthorized');
   }
 
   const base64Credentials = authHeader.split(' ')[1];
@@ -57,61 +53,63 @@ router.get('/connect', async (req, res) => {
 
   try {
     const token = await AuthController.getConnect(email, password);
-    redisClient.set(`auth_${token}`, token, 86400);
+    await redisClient.set(`auth_${token}`, token, 86400);
     res.status(200).json({ token });
   } catch (err) {
-    sendErrorResponse(res, 401, err.message);
+    next(err);
   }
 });
 
 // Disconnect route
-router.get('/disconnect', async (req, res) => {
+router.get('/disconnect', async (req, res, next) => {
   const token = req.headers['x-token'];
-  if (!token) return sendErrorResponse(res, 401, 'Unauthorized');
+  if (!token) throw new AuthError('Unauthorized');
 
   try {
     await AuthController.getDisconnect(token);
-    redisClient.del(`auth_${token}`);
+    await redisClient.del(`auth_${token}`);
     res.status(204).send();
   } catch (err) {
-    sendErrorResponse(res, 401, err.message);
+    next(err);
   }
 });
 
 // Get the current user
-router.get('/users/me', async (req, res) => {
+router.get('/users/me', async (req, res, next) => {
   const token = req.headers['x-token'];
-  if (!token) return sendErrorResponse(res, 401, 'Unauthorized');
+  if (!token) throw new AuthError('Unauthorized');
 
   try {
     const user = await UsersController.getMe(token);
     res.status(200).json({ id: user._id, email: user.email });
   } catch (err) {
-    sendErrorResponse(res, 401, err.message);
+    next(err);
   }
 });
 
 // Upload a file
-router.post('/files', async (req, res) => {
+router.post('/files', async (req, res, next) => {
   const token = req.headers['x-token'];
-  if (!token) return sendErrorResponse(res, 401, 'Unauthorized');
+  if (!token) throw new AuthError('Unauthorized');
 
   try {
     const user = await UsersController.getMe(token);
-    const { name, type, parentId, isPublic, data } = req.body;
+    const {
+      name, type, parentId, isPublic, data,
+    } = req.body;
 
-    if (!name) return sendErrorResponse(res, 400, 'Missing name');
+    if (!name) throw new BusinessError('Missing name');
     if (!type || !['file', 'folder', 'image'].includes(type)) {
-      return sendErrorResponse(res, 400, 'Invalid or missing type');
+      throw new BusinessError('Invalid or missing type');
     }
     if (type !== 'folder' && !data) {
-      return sendErrorResponse(res, 400, 'Missing data');
+      throw new BusinessError('Missing data');
     }
 
     if (parentId) {
       const file = await FilesController.findFile(parentId);
       if (file.type !== 'folder') {
-        return sendErrorResponse(res, 400, 'Parent is not a folder');
+        throw new BusinessError('Parent is not a folder');
       }
     }
 
@@ -135,39 +133,92 @@ router.post('/files', async (req, res) => {
       parentId: file.parentId,
     });
   } catch (err) {
-    sendErrorResponse(res, 400, err.message);
+    next(err);
   }
 });
 
 // Get a specific file
-router.get('/files/:id', async (req, res) => {
+router.get('/files/:id', async (req, res, next) => {
   const token = req.headers['x-token'];
-  if (!token) return sendErrorResponse(res, 401, 'Unauthorized');
+  if (!token) throw new AuthError('Unauthorized');
 
   try {
     const user = await UsersController.getMe(token);
     const { id } = req.params;
 
-    if (!id) return sendErrorResponse(res, 400, 'Missing required ID param');
+    if (!id) throw new BusinessError('Missing required ID param');
 
     const file = await FilesController.getShow(user._id, id);
     res.status(200).json(file);
   } catch (err) {
-    sendErrorResponse(res, 404, err.message);
+    next(err);
   }
 });
 
 // List files with pagination
-router.get('/files', async (req, res) => {
+router.get('/files', async (req, res, next) => {
   const token = req.headers['x-token'];
-  if (!token) return sendErrorResponse(res, 401, 'Unauthorized');
+  if (!token) throw new Auth('Unauthorized');
 
   try {
     const { parentId, page = 1 } = req.query;
     const files = await FilesController.getIndex(parentId, page);
     res.status(200).json(files);
   } catch (err) {
-    sendErrorResponse(res, 400, err.message);
+    next(err);
+  }
+});
+
+router.put('/files/:id/publish', async (req, res, next) => {
+  const token = req.headers['x-token'];
+  if (!token) throw new AuthError('Unauthorized');
+
+  try {
+    const user = await UsersController.getMe(token);
+    const { id } = req.params;
+
+    if (!id) throw new BusinessError('Missing required ID param');
+
+    const file = await FilesController.putPublish(user._id, id);
+
+    res.status(200).json(file);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/files/:id/unpublish', async (req, res, next) => {
+  const token = req.headers['x-token'];
+  if (!token) throw new AuthError('Unauthorized');
+
+  try {
+    const user = await UsersController.getMe(token);
+    const { id } = req.params;
+
+    if (!id) throw new BusinessError('Missing required ID param');
+
+    const file = await FilesController.putUnpublish(user._id, id);
+
+    res.status(200).json(file);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/files/:id/data', async (req, res, next) => {
+  const token = req.headers['x-token'];
+  if (!token) throw new AuthError('Unauthorized');
+
+  try {
+    const user = await UsersController.getMe(token);
+    const { id } = req.params;
+
+    if (!id) throw new BusinessError('Missing required ID param');
+
+    const content = await FilesController.getFile(user._id, id);
+    res.status(200).json(content);
+  } catch (err) {
+    next(err);
   }
 });
 

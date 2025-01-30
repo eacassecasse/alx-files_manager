@@ -1,12 +1,13 @@
 import Sha1 from 'sha1';
 import dbClient from '../utils/db';
+import BusinessError, { AuthError } from '../models/errors';
 
 class UsersController {
   static async postNew(email, password) {
     const user = await dbClient.find('users', { email });
 
     if (user) {
-      throw new Error('Already exists');
+      throw new BusinessError('Already exists');
     }
 
     const hash = Sha1(password);
@@ -18,7 +19,7 @@ class UsersController {
     const user = await dbClient.find('users', { token });
 
     if (!user) {
-      throw new Error('Unauthorized');
+      throw new AuthError('Unauthorized');
     }
 
     return user;

@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
 import createFileWithDirectories from '../utils/shared';
+import {NotFoundError} from "../models/errors";
 
 class FilesController {
   static async postUpload(obj) {
@@ -31,7 +32,7 @@ class FilesController {
     const file = await dbClient.find('files', { _id: ObjectId(id) });
 
     if (!file) {
-      throw new Error();
+      throw new NotFoundError('File not found');
     }
 
     return file;
@@ -48,10 +49,46 @@ class FilesController {
   }
 
   static async getIndex(parentId, page) {
-    const filter = parentId ? { parentId } : {};
+    const filter = parentId ? { parentId: ObjectId(parentId) } : {};
     const size = 20;
     const offset = size * (page - 1);
     return dbClient.findPaginated('files', filter, offset, size);
+  }
+
+  static async putPublish(userId, id) {
+    const file = await dbClient.find('files', { _id: ObjectId(id), userId });
+
+    if (!file) {
+      throw new NotFoundError('Not found');
+    }
+
+    await dbClient.update('files', file._id, { isPublic: true });
+
+    return dbClient.find('files', { _id: ObjectId(id), userId });
+  }
+
+  static async putUnpublish(userId, id) {
+    const file = await dbClient.find('files', { _id: ObjectId(id), userId });
+
+    if (!file) {
+      throw new NotFoundError('Not found');
+    }
+
+    await dbClient.update('files', file._id, { isPublic: false });
+
+    return dbClient.find('files', { _id: ObjectId(id), userId });
+  }
+
+  static async getFile(userId, id) {
+    const file = await dbClient.find('files', { _id: ObjectId(id), userId });
+
+    if (!file) {
+      throw new NotFoundError('Not found');
+    }
+
+    if (file.type === 'folder') {
+      throw new Error('A folder doesn\'t have content');
+    }
   }
 }
 
