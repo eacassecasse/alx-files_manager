@@ -3,7 +3,7 @@ import UsersController from './controllers/UsersController';
 
 const errorHandler = (err, req, res, next) => {
   const statusCode = err.code || 500;
-  const message = 'Internal Server Error' || err.message;
+  const message = err.message || 'Internal Server Error';
   res.status(statusCode).json({ error: message });
   next();
 };
@@ -11,7 +11,9 @@ const errorHandler = (err, req, res, next) => {
 // Middleware for token validation
 export const validateToken = async (req, res, next) => {
   const token = req.headers['x-token'];
-  if (!token) return next(new AuthError('Unauthorized'));
+  if (!token) {
+    return next(new AuthError('Unauthorized'));
+  }
 
   try {
     const user = await UsersController.getMe(token);

@@ -12,12 +12,7 @@ import { Request, Response } from 'express';
 import { contentType } from 'mime-types';
 import mongoDBCore from 'mongodb/lib/core';
 import dbClient from '../utils/db';
-<<<<<<< HEAD
-import createFileWithDirectories from '../utils/shared';
-import {NotFoundError} from "../models/errors";
-=======
 import { getUserFromXToken } from '../utils/auth';
->>>>>>> 3ab2494e6d23c1ede93108797d800ae87b32b1ea
 
 const VALID_FILE_TYPES = {
   folder: 'folder',
@@ -217,12 +212,8 @@ export default class FilesController {
       .findOne(fileFilter);
 
     if (!file) {
-<<<<<<< HEAD
-      throw new NotFoundError('File not found');
-=======
       res.status(404).json({ error: 'Not found' });
       return;
->>>>>>> 3ab2494e6d23c1ede93108797d800ae87b32b1ea
     }
     await (await dbClient.filesCollection())
       .updateOne(fileFilter, { $set: { isPublic: true } });
@@ -267,13 +258,6 @@ export default class FilesController {
     });
   }
 
-<<<<<<< HEAD
-  static async getIndex(parentId, page) {
-    const filter = parentId ? { parentId: ObjectId(parentId) } : {};
-    const size = 20;
-    const offset = size * (page - 1);
-    return dbClient.findPaginated('files', filter, offset, size);
-=======
   /**
    * Retrieves the content of a file.
    * @param {Request} req The Express request object.
@@ -315,7 +299,6 @@ export default class FilesController {
     const absoluteFilePath = await realpathAsync(filePath);
     res.setHeader('Content-Type', contentType(file.name) || 'text/plain; charset=utf-8');
     res.status(200).sendFile(absoluteFilePath);
->>>>>>> 3ab2494e6d23c1ede93108797d800ae87b32b1ea
   }
 
   static async putPublish(userId, id) {
