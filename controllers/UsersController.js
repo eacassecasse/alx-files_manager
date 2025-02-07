@@ -1,6 +1,6 @@
 import Sha1 from 'sha1';
 import dbClient from '../utils/db';
-import { BusinessError } from '../models/errors';
+import { AuthError, BusinessError } from '../models/errors';
 
 class UsersController {
   static async postNew(req, res, next) {
@@ -26,14 +26,22 @@ class UsersController {
     }
   }
 
-  static async getMe(token) {
-    const user = await dbClient.find('users', { token });
+  static async getMe(req, res, next) {
+    const token = req.headers['x-token'];
 
-    if (!user) {
-      throw new Error('Unauthorized');
+    if (!token) return next(new AuthError('Unauthorized'));
+
+    try {
+      const user = await dbClient.find('users', { token });
+
+      if (!user) {
+        return next(new AuthError('Unauthorized'));
+      }
+
+      return res.status(200).json({ id: user._id, email: user.email });
+    } catch (err) {
+      return next(err);
     }
-
-    return user;
   }
 }
 

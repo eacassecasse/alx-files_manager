@@ -29,52 +29,13 @@ router.get('/stats', async (req, res) => {
 router.post('/users', UsersController.postNew);
 
 // Connect route
-router.get('/connect', async (req, res) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
-    return sendErrorResponse(res, 401, 'Unauthorized');
-  }
-
-  const base64Credentials = authHeader.split(' ')[1];
-  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
-  const [email, password] = credentials.split(':');
-
-  try {
-    const token = await AuthController.getConnect(email, password);
-    redisClient.set(`auth_${token}`, token, 86400);
-    return res.status(200).json({ token });
-  } catch (err) {
-    return sendErrorResponse(res, 401, err.message);
-  }
-});
+router.get('/connect', AuthController.getConnect);
 
 // Disconnect route
-router.get('/disconnect', async (req, res) => {
-  const token = req.headers['x-token'];
-  if (!token) return sendErrorResponse(res, 401, 'Unauthorized');
-
-  try {
-    await AuthController.getDisconnect(token);
-    redisClient.del(`auth_${token}`);
-    return res.status(204).send();
-  } catch (err) {
-    return sendErrorResponse(res, 401, err.message);
-  }
-});
+router.get('/disconnect', AuthController.getDisconnect);
 
 // Get the current user
-router.get('/users/me', async (req, res) => {
-  const token = req.headers['x-token'];
-  if (!token) return sendErrorResponse(res, 401, 'Unauthorized');
-
-  try {
-    const user = await UsersController.getMe(token);
-    return res.status(200).json({ id: user._id, email: user.email });
-  } catch (err) {
-    return sendErrorResponse(res, 401, err.message);
-  }
-});
+router.get('/users/me', UsersController.getMe);
 
 // Upload a file
 router.post('/files', async (req, res) => {
