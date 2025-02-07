@@ -53,6 +53,42 @@ class FilesController {
     const offset = size * (page - 1);
     return dbClient.findPaginated('files', filter, offset, size);
   }
+
+  static async putPublish(userId, id) {
+    const file = await dbClient.find('files', { _id: ObjectId(id), userId });
+
+    if (!file) {
+      throw new NotFoundError('Not found');
+    }
+
+    await dbClient.update('files', file._id, { isPublic: true });
+
+    return dbClient.find('files', { _id: ObjectId(id), userId });
+  }
+
+  static async putUnpublish(userId, id) {
+    const file = await dbClient.find('files', { _id: ObjectId(id), userId });
+
+    if (!file) {
+      throw new NotFoundError('Not found');
+    }
+
+    await dbClient.update('files', file._id, { isPublic: false });
+
+    return dbClient.find('files', { _id: ObjectId(id), userId });
+  }
+
+  static async getFile(userId, id) {
+    const file = await dbClient.find('files', { _id: ObjectId(id), userId });
+
+    if (!file) {
+      throw new NotFoundError('Not found');
+    }
+
+    if (file.type === 'folder') {
+      throw new Error('A folder doesn\'t have content');
+    }
+  }
 }
 
 export default FilesController;
