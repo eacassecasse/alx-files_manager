@@ -1,17 +1,8 @@
 import express from 'express';
-<<<<<<< HEAD
-import express from 'express';
-=======
->>>>>>> parent of 3ab2494 (Reapply "feat: An api using express.js")
 import AppController from '../controllers/AppController';
 import UsersController from '../controllers/UsersController';
 import redisClient from '../utils/redis';
 import AuthController from '../controllers/AuthController';
-<<<<<<< HEAD
-import redisClient from '../utils/redis';
-import AuthController from '../controllers/AuthController';
-=======
->>>>>>> parent of 3ab2494 (Reapply "feat: An api using express.js")
 import FilesController from '../controllers/FilesController';
 
 const router = express.Router();
