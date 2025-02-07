@@ -1,7 +1,8 @@
-class GenericError extends Error {
-  constructor(message, code) {
-    super(message);
+export default class GenericError extends Error {
+  constructor(message, code = 500) {
+    super();
     this.code = code;
+    this.message = message;
     this.name = this.constructor.name;
   }
 }
@@ -12,7 +13,7 @@ export class NotFoundError extends GenericError {
   }
 }
 
-export default class BusinessError extends GenericError {
+export class BusinessError extends GenericError {
   constructor(message) {
     super(message, 400);
   }

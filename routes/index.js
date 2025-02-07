@@ -26,20 +26,7 @@ router.get('/stats', async (req, res) => {
 });
 
 // Create a new user
-router.post('/users', async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email) return sendErrorResponse(res, 400, 'Missing email');
-  if (!password) return sendErrorResponse(res, 400, 'Missing password');
-
-  try {
-    const result = await UsersController.postNew({ email, password });
-    const user = result.ops[0];
-    return res.status(201).json({ id: user._id, email: user.email });
-  } catch (err) {
-    return sendErrorResponse(res, 400, err.message);
-  }
-});
+router.post('/users', UsersController.postNew);
 
 // Connect route
 router.get('/connect', async (req, res) => {

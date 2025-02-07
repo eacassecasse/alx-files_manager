@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { Request, Response, NextFunction } from 'express';
+import GenericError from '../models/errors';
 
 /**
  * Represents an error in this API.
@@ -22,7 +23,7 @@ export class APIError extends Error {
 export const errorResponse = (err, req, res, next) => {
   const defaultMsg = `Failed to process ${req.url}`;
 
-  if (err instanceof APIError) {
+  if (err instanceof GenericError) {
     res.status(err.code).json({ error: err.message || defaultMsg });
     return;
   }
