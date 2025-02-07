@@ -13,7 +13,7 @@ class UsersController {
       const user = await dbClient.find('users', { email });
 
       if (user) {
-        return next(new BusinessError('Already exists'));
+        return next(new BusinessError('Already exist'));
       }
 
       const hash = Sha1(password);
