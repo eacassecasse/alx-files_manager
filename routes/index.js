@@ -8,9 +8,7 @@ import FilesController from '../controllers/FilesController';
 const router = express.Router();
 
 // Helper function to send error responses and stop further processing
-const sendErrorResponse = (res, status, message) => {
-  res.status(status).json({ error: message });
-};
+const sendErrorResponse = (res, status, message) => res.status(status).json({ error: message });
 
 // Status route
 router.get('/status', (req, res) => {
@@ -21,9 +19,9 @@ router.get('/status', (req, res) => {
 router.get('/stats', async (req, res) => {
   try {
     const stats = await AppController.getStats();
-    res.status(200).json(stats);
+    return res.status(200).json(stats);
   } catch (err) {
-    sendErrorResponse(res, 500, err.message);
+    return sendErrorResponse(res, 500, err.message);
   }
 });
 
@@ -37,9 +35,9 @@ router.post('/users', async (req, res) => {
   try {
     const result = await UsersController.postNew({ email, password });
     const user = result.ops[0];
-    res.status(201).json({ id: user._id, email: user.email });
+    return res.status(201).json({ id: user._id, email: user.email });
   } catch (err) {
-    sendErrorResponse(res, 400, err.message);
+    return sendErrorResponse(res, 400, err.message);
   }
 });
 
@@ -58,9 +56,9 @@ router.get('/connect', async (req, res) => {
   try {
     const token = await AuthController.getConnect(email, password);
     redisClient.set(`auth_${token}`, token, 86400);
-    res.status(200).json({ token });
+    return res.status(200).json({ token });
   } catch (err) {
-    sendErrorResponse(res, 401, err.message);
+    return sendErrorResponse(res, 401, err.message);
   }
 });
 
@@ -72,9 +70,9 @@ router.get('/disconnect', async (req, res) => {
   try {
     await AuthController.getDisconnect(token);
     redisClient.del(`auth_${token}`);
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
-    sendErrorResponse(res, 401, err.message);
+    return sendErrorResponse(res, 401, err.message);
   }
 });
 
@@ -85,9 +83,9 @@ router.get('/users/me', async (req, res) => {
 
   try {
     const user = await UsersController.getMe(token);
-    res.status(200).json({ id: user._id, email: user.email });
+    return res.status(200).json({ id: user._id, email: user.email });
   } catch (err) {
-    sendErrorResponse(res, 401, err.message);
+    return sendErrorResponse(res, 401, err.message);
   }
 });
 
@@ -98,7 +96,13 @@ router.post('/files', async (req, res) => {
 
   try {
     const user = await UsersController.getMe(token);
-    const { name, type, parentId, isPublic, data } = req.body;
+    const {
+      name,
+      type,
+      parentId,
+      isPublic,
+      data,
+    } = req.body;
 
     if (!name) return sendErrorResponse(res, 400, 'Missing name');
     if (!type || !['file', 'folder', 'image'].includes(type)) {
@@ -126,7 +130,7 @@ router.post('/files', async (req, res) => {
 
     const result = await FilesController.postUpload(fileData);
     const file = result.ops[0];
-    res.status(201).json({
+    return res.status(201).json({
       id: file._id,
       userId: file.userId,
       name: file.name,
@@ -135,7 +139,7 @@ router.post('/files', async (req, res) => {
       parentId: file.parentId,
     });
   } catch (err) {
-    sendErrorResponse(res, 400, err.message);
+    return sendErrorResponse(res, 400, err.message);
   }
 });
 
@@ -151,9 +155,9 @@ router.get('/files/:id', async (req, res) => {
     if (!id) return sendErrorResponse(res, 400, 'Missing required ID param');
 
     const file = await FilesController.getShow(user._id, id);
-    res.status(200).json(file);
+    return res.status(200).json(file);
   } catch (err) {
-    sendErrorResponse(res, 404, err.message);
+    return sendErrorResponse(res, 404, err.message);
   }
 });
 
@@ -165,9 +169,9 @@ router.get('/files', async (req, res) => {
   try {
     const { parentId, page = 1 } = req.query;
     const files = await FilesController.getIndex(parentId, page);
-    res.status(200).json(files);
+    return res.status(200).json(files);
   } catch (err) {
-    sendErrorResponse(res, 400, err.message);
+    return sendErrorResponse(res, 400, err.message);
   }
 });
 
