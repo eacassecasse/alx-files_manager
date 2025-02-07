@@ -1,20 +1,31 @@
-/* eslint-disable import/no-named-as-default */
+import Sha1 from 'sha1';
 import { v4 as uuidv4 } from 'uuid';
-import redisClient from '../utils/redis';
+import dbClient from '../utils/db';
 
-export default class AuthController {
-  static async getConnect(req, res) {
-    const { user } = req;
+class AuthController {
+  static async getConnect(email, password) {
+    const user = await dbClient.find('users', { email });
+
+    if (!user || Sha1(password) !== user.hash) {
+      throw new Error('Unauthorized');
+    }
+
     const token = uuidv4();
 
-    await redisClient.set(`auth_${token}`, user._id.toString(), 24 * 60 * 60);
-    res.status(200).json({ token });
+    await dbClient.update('users', user._id, { token });
+
+    return token;
   }
 
-  static async getDisconnect(req, res) {
-    const token = req.headers['x-token'];
+  static async getDisconnect(token) {
+    const user = await dbClient.find('users', { token });
 
-    await redisClient.del(`auth_${token}`);
-    res.status(204).send();
+    if (!user) {
+      throw new Error('Unauthorized');
+    }
+
+    await dbClient.update('users', user._id, { token: '' });
   }
 }
+
+export default AuthController;
